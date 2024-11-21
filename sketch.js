@@ -6,6 +6,14 @@ let showCoords = false;
 let noseIndex = 1;
 let center = {"x": 320, "y": 240};
 let offset = {"x": 0, "y":0};
+let features = { 
+  "mouth" : {"width": 0, "height": 0, "indecies" : [61, 291,0, 17,]}, 
+  "right_eye" : {"width":0, "height": 0, "indecies" : [362, 263, 386, 374,]},
+  "left_eye" : {"width":0, "height": 0, "indecies" : [33, 133, 159, 145,]},
+  "left_eyebrow" : {"width":0, "height": 0, "indecies" : [9, 383 ,334 ,443 ,]},
+  "right_eyebrow" : {"width":0, "height": 0, "indecies" : [9, 156, 105, 223,]},
+  "nose" : {"origin" : {"x" : 0, "y" : 0 }, "tip" : {"x" : 0, "y" : 0}, "index" : noseIndex, "length" : 0, "max_length" : 50, "norm_length":0, },
+ };
 
 let lipsExterior = [
     267,
@@ -53,16 +61,6 @@ let lipsInterior = [
     82,
   ];
 
-let mouthHFeature = 0
-let mouthWFeature = 0
-//let mouthIndex = [0, 17,];
-let mouthIndex = [61, 291,0, 17,];
-let rEyeFeature = 0
-let rEyeIndex = [362, 263, 386, 374,];
-let lEyeFeature = 0
-let lEyeIndex = [33, 133, 159, 145,];
-
-
 function preload() {
   faceMesh = ml5.faceMesh({ maxFaces: 1, refinedLandmarks: false, flipped: true });
 }
@@ -92,12 +90,73 @@ function draw() {
     offset.x = (faces[0].box.xMin + (faces[0].box.width * .5)) - center.x;
     offset.y = (faces[0].box.yMin + (faces[0].box.height * .5)) - center.y;
     drawPartsKeypoints();
-    //calculateFeatures();
+    calculateFeatures();
 //    drawBoundingBoxes();
   }
 }
 
-function getFeatures(indecies)
+
+function getVectorFeature(item)
+{
+  // expected item struct --> "nose" : {"origin" : {"x" : 0, "y" : 0 }, "tip" : {"x" : 0, "y" : 0}, "index" : noseIndex, "length" : 0, "max_length" : 50, "norm_length":0, },
+  
+  item.origin.x = round(faces[0].box.xMin + (faces[0].box.width *.5) - offset.x) ;
+  item.origin.y = round(faces[0].box.yMin + (faces[0].box.height *.5) - offset.y);
+  item.tip.x = round(faces[0].keypoints[item.index].x - offset.x);
+  item.tip.y = round(faces[0].keypoints[item.index].y - offset.y);
+
+  let sign = 1;
+
+  if(item.tip.x < item.origin.x){sign = -1;}
+
+  item.length = round(dist(item.origin.x, item.origin.y, item.tip.x, item.tip.y));
+  item.length = constrain(item.length, 0, item.max_length);
+  item.norm_length = norm(item.length, 0, item.max_length);
+  item.length = item.length * sign;
+  item.norm_length = item.norm_length * sign;
+
+  debug(JSON.stringify(item.length));
+}
+
+function drawVectorFeature(item){
+  // expected item struct --> "nose" : {"origin" : {"x" : 0, "y" : 0 }, "tip" : {"x" : 0, "y" : 0}, "index" : noseIndex, "length" : 0 },
+
+
+  stroke(0, 0, 255);
+  line(item.origin.x, item.origin.y, item.tip.x, item.tip.y);
+  strokeWeight(5);
+  point(item.origin.x, item.origin.y);
+  point(item.tip.x, item.tip.y);
+}
+
+function getLengthFeature(indecies)
+{
+  let feat = {"width" : 0, "height": 0};
+
+  // get width length
+  let a = faces[0].keypoints[indecies[0]];
+  let b = faces[0].keypoints[indecies[1]];
+  let ax = a.x - offset.x;
+  let ay = a.y - offset.y;
+  let bx = b.x - offset.x;
+  let by = b.y - offset.y;
+  
+  feat.width = round(dist(a.x, a.y, b.x, b.y));
+
+  // get height length
+  a = faces[0].keypoints[indecies[2]];
+  b = faces[0].keypoints[indecies[3]];
+  ax = a.x - offset.x;
+  ay = a.y - offset.y;
+  bx = b.x - offset.x;
+  by = b.y - offset.y;
+
+  feat.height = round(dist(a.x, a.y, b.x, b.y));
+
+  return feat;
+}
+
+function drawLengthFeatures(indecies)
 {
     // get mouth feature
     let a = faces[0].keypoints[indecies[0]];
@@ -113,11 +172,11 @@ function getFeatures(indecies)
     point(ax, ay);
     point(bx, by);
 
-    featWMouth = dist(a.x, a.y, b.x, b.y);
+    let feat = dist(a.x, a.y, b.x, b.y);
     noStroke();
     fill(0, 0, 255);
     textSize(24);
-    text(round(featWMouth), bx, by);
+    text(round(feat), bx, by);
 
     a = faces[0].keypoints[indecies[2]];
     b = faces[0].keypoints[indecies[3]];
@@ -132,21 +191,64 @@ function getFeatures(indecies)
     point(ax, ay);
     point(bx, by);
 
-    featHMouth = dist(a.x, a.y, b.x, b.y);
+    feat = dist(a.x, a.y, b.x, b.y);
     noStroke();
     fill(0, 0, 255);
     textSize(24);
-    text(round(featWMouth), bx, by);
+    text(round(feat), bx, by);
 }
 
-function getREyeFeatures(){
 
+function debug(output){
+  noStroke();
+  fill(0, 0, 255);
+  textSize(24);
+  text(output, 50, center.y + 74);
 }
 
 function calculateFeatures() {
-  getFeatures(mouthIndex);
-  getFeatures(rEyeIndex);
-  getFeatures(lEyeIndex);
+  
+  // get mouth feature
+  let feat = getLengthFeature(features.mouth.indecies);
+  features.mouth.width = feat.width;
+  features.mouth.height = feat.height;
+
+  // get right eye feature
+  feat = getLengthFeature(features.right_eye.indecies);
+  features.right_eye.width = feat.width;
+  features.right_eye.height = feat.height;
+
+  // get left eye feature
+  feat = getLengthFeature(features.left_eye.indecies);
+  features.left_eye.width = feat.width;
+  features.left_eye.height = feat.height;
+
+  // get right eye feature
+  feat = getLengthFeature(features.right_eyebrow.indecies);
+  features.right_eyebrow.width = feat.width;
+  features.right_eyebrow.height = feat.height;
+
+  // get left eye feature
+   feat = getLengthFeature(features.left_eyebrow.indecies);
+   features.left_eyebrow.width = feat.width;
+   features.left_eyebrow.height = feat.height;
+
+   //debug(JSON.stringify(features.right_eyebrow));
+  
+   getVectorFeature(features.nose);
+   drawVectorFeature(features.nose);
+
+  //  drawLengthFeatures(features.mouth.indecies);
+  //  drawLengthFeatures(features.right_eye.indecies);
+  //  drawLengthFeatures(features.left_eye.indecies);
+  //  drawLengthFeatures(features.right_eyebrow.indecies);
+  //  drawLengthFeatures(features.left_eyebrow.indecies);
+
+   let rightEye = {"origin" : {"x": center.x - 25, "y": center.y}, "w": 40, "h": 50};
+   drawEye(rightEye);
+   let leftEye = {"origin" : {"x": center.x + 25, "y": center.y}, "w": 40, "h": 50};
+   drawEye(leftEye);
+
 }
 
 function drawBoundingBoxes() {
@@ -169,7 +271,6 @@ function drawPartsKeypoints() {
 
     // If there is at least one face
     if (faces.length > 0) {
-
         // draw face oval
         stroke(0, 0, 255);
         beginShape();
@@ -265,5 +366,14 @@ function drawPartsKeypoints() {
     }
 }
 
-  
+function drawEye(eye)
+{
+  stroke(0, 0, 255);
+  fill(220,220,100);
+  ellipse(eye.origin.x, eye.origin.y, eye.w, eye.h);
+
+  let x = eye.origin.x + (features.nose.norm_length * 10); 
+  circle(x, eye.origin.y, 10);
+}
+
   
