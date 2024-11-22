@@ -10,9 +10,16 @@ let features = {
   "mouth" : {"width": 0, "height": 0, "indecies" : [61, 291,0, 17,]}, 
   "right_eye" : {"width":0, "height": 0, "indecies" : [362, 263, 386, 374,]},
   "left_eye" : {"width":0, "height": 0, "indecies" : [33, 133, 159, 145,]},
-  "left_eyebrow" : {"width":0, "height": 0, "indecies" : [9, 383 ,334 ,443 ,]},
-  "right_eyebrow" : {"width":0, "height": 0, "indecies" : [9, 156, 105, 223,]},
-  "nose" : {"origin" : {"x" : 0, "y" : 0 }, "tip" : {"x" : 0, "y" : 0}, "index" : noseIndex, "length" : 0, "max_length" : 50, "norm_length":0, },
+  "left_eyebrow" : { "width":0, "height": 0, "indecies" : [9, 383 ,334 ,443 ,], "norm_h" : 0, "min_h": 5, "max_h": 20, "norm_w" : 0, "min_w": 20, "max_w": 60, "flip": false, },
+  "right_eyebrow" : {"width":0, "height": 0, "indecies" : [9, 156, 105, 223,], "norm_h" : 0, "min_h": 5, "max_h": 20, "norm_w" : 0, "min_w": 20, "max_w": 60, "flip": true, },
+  "nose" : {"origin" : {"x" : 0, "y" : 0 }, 
+    "tip" : {"x" : 0, "y" : 0}, 
+    "index" : noseIndex, 
+    "length" : 0, 
+    "max_length" : 50, 
+    "norm_length":0,
+    "dimensions" : { "w":0, "h":0, "norm_w":0, "norm_h":0, "max_w" : 50, "max_h": 50 },
+   },
  };
 
 let lipsExterior = [
@@ -82,23 +89,16 @@ function setup() {
   faceMesh.detectStart(video, gotFaces);
 }
 
-function draw() {
-  background(0, 0, 0);
-
-//  image(video, 0, 0, width, height);
-  if (faces.length > 0 && faces[0].lips) {
-    offset.x = (faces[0].box.xMin + (faces[0].box.width * .5)) - center.x;
-    offset.y = (faces[0].box.yMin + (faces[0].box.height * .5)) - center.y;
-    drawPartsKeypoints();
-    calculateFeatures();
-//    drawBoundingBoxes();
-  }
-}
-
-
 function getVectorFeature(item)
 {
-  // expected item struct --> "nose" : {"origin" : {"x" : 0, "y" : 0 }, "tip" : {"x" : 0, "y" : 0}, "index" : noseIndex, "length" : 0, "max_length" : 50, "norm_length":0, },
+  // expected item struct --> 
+  //  "nose" : {"origin" : {"x" : 0, "y" : 0 }, 
+  //    "tip" : {"x" : 0, "y" : 0}, 
+  //    "index" : noseIndex, 
+  //    "length" : 0, "max_length" : 50, 
+  //    "norm_length":0, 
+  //    "dimensions" : { "w":0, "h":0, "norm_w":0, "norm_h":0, "max_w" : 10, "max_h": 0 }, 
+  //  },
   
   item.origin.x = round(faces[0].box.xMin + (faces[0].box.width *.5) - offset.x) ;
   item.origin.y = round(faces[0].box.yMin + (faces[0].box.height *.5) - offset.y);
@@ -115,7 +115,16 @@ function getVectorFeature(item)
   item.length = item.length * sign;
   item.norm_length = item.norm_length * sign;
 
-  debug(JSON.stringify(item.length));
+  //    "dimensions" : { "w":0, "h":0, "norm_w":0, "norm_h":0, "max_w" : 10, "max_h": 0 }, 
+  item.dimensions.w = round(item.tip.x - item.origin.x);
+  sign = 1;
+  if(item.dimensions.w < 0){sign = -1;} 
+  item.dimensions.norm_w = norm(abs(item.dimensions.w), 0, item.dimensions.max_w) * sign;
+  
+  item.dimensions.h = round(item.tip.y - item.origin.y);
+  sign = 1;
+  if(item.dimensions.h < 0){sign = -1;}
+  item.dimensions.norm_h = norm(abs(item.dimensions.h), 0, item.dimensions.max_h) * sign;
 }
 
 function drawVectorFeature(item){
@@ -127,6 +136,42 @@ function drawVectorFeature(item){
   strokeWeight(5);
   point(item.origin.x, item.origin.y);
   point(item.tip.x, item.tip.y);
+}
+
+function getNormLengthFeature(item)
+  // item structure -->   
+  // "left_eyebrow" : { 
+  //  "width":0, 
+  //  "height": 0, 
+  //  "indecies" : [9, 383 ,334 ,443 ,], 
+  //  "norm_h" : 0, 
+  //  "min_h": 10, 
+  //  "max_h": 14, 
+  //  "norm_w" : 0, 
+  //  "min_w": 40, 
+  //  "max_w": 60 },
+{
+    // get width length
+  let a = faces[0].keypoints[item.indecies[0]];
+  let b = faces[0].keypoints[item.indecies[1]];
+  let ax = a.x - offset.x;
+  let ay = a.y - offset.y;
+  let bx = b.x - offset.x;
+  let by = b.y - offset.y;
+  
+  item.width = round(dist(a.x, a.y, b.x, b.y));
+  item.norm_w = norm(item.width, item.min_w, item.max_w);
+
+  // get height length
+  a = faces[0].keypoints[item.indecies[2]];
+  b = faces[0].keypoints[item.indecies[3]];
+  ax = a.x - offset.x;
+  ay = a.y - offset.y;
+  bx = b.x - offset.x;
+  by = b.y - offset.y;
+
+  item.height = round(dist(a.x, a.y, b.x, b.y));
+  item.norm_h = norm(item.height, item.min_h, item.max_h);
 }
 
 function getLengthFeature(indecies)
@@ -228,12 +273,14 @@ function calculateFeatures() {
   features.right_eyebrow.width = feat.width;
   features.right_eyebrow.height = feat.height;
 
-  // get left eye feature
-   feat = getLengthFeature(features.left_eyebrow.indecies);
-   features.left_eyebrow.width = feat.width;
-   features.left_eyebrow.height = feat.height;
+  getNormLengthFeature(features.right_eyebrow);
+  getNormLengthFeature(features.left_eyebrow);
 
-   //debug(JSON.stringify(features.right_eyebrow));
+  // get left eye feature
+  feat = getLengthFeature(features.left_eyebrow.indecies);
+  features.left_eyebrow.width = feat.width;
+  features.left_eyebrow.height = feat.height;
+
   
    getVectorFeature(features.nose);
    drawVectorFeature(features.nose);
@@ -372,8 +419,73 @@ function drawEye(eye)
   fill(220,220,100);
   ellipse(eye.origin.x, eye.origin.y, eye.w, eye.h);
 
-  let x = eye.origin.x + (features.nose.norm_length * 10); 
-  circle(x, eye.origin.y, 10);
+  // draw pupil
+  fill(0,0,255);
+  let x = eye.origin.x + (features.nose.dimensions.norm_w * 10); 
+  let y = eye.origin.y + (features.nose.dimensions.norm_h * 10); 
+  circle(x, y + 4, 22);
+}
+
+function drawEyebrow(nose, brow)
+{
+  // brow structure -->   
+  // "left_eyebrow" : { 
+  //  "width":0, 
+  //  "height": 0, 
+  //  "indecies" : [9, 383 ,334 ,443 ,], 
+  //  "norm_h" : 0, 
+  //  "min_h": 10, 
+  //  "max_h": 14, 
+  //  "norm_w" : 0, 
+  //  "min_w": 40, 
+  //  "max_w": 60 
+  //  "flip": true},
+
+  strokeWeight(10);
+  stroke(0, 0, 255);
+  fill(220,220,100);
+
+
+  let x_offset = 10;
+  
+  if(brow.flip){x_offset = x_offset * -1;}
+  
+  let x1 = nose.origin.x + x_offset;
+  let y1 = nose.origin.y - (30 + (brow.norm_h * 10)); 
+  let x2 = x1 + 40; // + (brow.norm_w * 10);
+  if (brow.flip) {x2 = x1 - 40;}
+  let y2 = y1;
+  
+  //line(x1, y1, x2, y2);
+  let v = (brow.norm_h * 20);
+  let c_x1 = x1;
+  let c_y1 = y1 - v;
+  let c_x2 = x2;
+  let c_y2 = y2 + v;
+
+  noFill();
+  bezier(x1, y1, c_x1, c_y1, x2, y2, c_x2, c_y2);
+//  curve(c_x1, c_y1, x1, y1, c_x2, c_y2, x2, y2);
+
+  //debug(JSON.stringify(brow));
+
+}
+
+function draw() {
+  background(0, 0, 0);
+
+//  image(video, 0, 0, width, height);
+  if (faces.length > 0 && faces[0].lips) {
+    offset.x = (faces[0].box.xMin + (faces[0].box.width * .5)) - center.x;
+    offset.y = (faces[0].box.yMin + (faces[0].box.height * .5)) - center.y;
+    drawPartsKeypoints();
+    calculateFeatures();
+//    drawBoundingBoxes();
+
+    drawEyebrow(features.nose, features.right_eyebrow);
+    drawEyebrow(features.nose, features.left_eyebrow);
+
+  }
 }
 
   
