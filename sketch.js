@@ -165,7 +165,7 @@ function getNormLengthFeature(item)
   let bx = b.x - offset.x;
   let by = b.y - offset.y;
   
-  item.width = round(dist(a.x, a.y, b.x, b.y));
+  item.width = dist(a.x, a.y, b.x, b.y);
   item.norm_w = norm(item.width, item.min_w, item.max_w);
 
   // get height length
@@ -176,7 +176,7 @@ function getNormLengthFeature(item)
   bx = b.x - offset.x;
   by = b.y - offset.y;
 
-  item.height = round(dist(a.x, a.y, b.x, b.y));
+  item.height = dist(a.x, a.y, b.x, b.y);
   item.norm_h = norm(item.height, item.min_h, item.max_h);
 }
 
@@ -427,16 +427,16 @@ function drawEye(eye)
   stroke(0, 0, 255);
   fill(220,220,100);
 //  ellipse(eye.origin.x, eye.origin.y, eye.w, eye.h);
-  let h = features.left_eye.height * 3;
-  let w = features.left_eye.width;
+  let h = features.left_eye.height * 2;
+  let w = features.left_eye.width * 1;
 
-  ellipse(eye.origin.x, eye.origin.y, eye.w, h);
+  ellipse(eye.origin.x, eye.origin.y, w, h);
 
   // draw pupil
   fill(0,0,255);
   let x = eye.origin.x + (features.nose.dimensions.norm_w * 10); 
   let y = eye.origin.y + (features.nose.dimensions.norm_h * 10); 
-  circle(x, y, w *.5);
+  circle(x, y, w *.3);
 }
 
 function drawEyebrow(nose, brow)
@@ -471,7 +471,7 @@ function drawEyebrow(nose, brow)
   if (brow.flip) {x2 = x1 - w;}
   let y2 = y1;
   
-  let h = lerp(brow.min_h * .1, brow.max_h * 1.5, brow.norm_h);
+  let h = lerp(brow.min_h * .1, brow.max_h * 1.0, brow.norm_h);
   let c_x1 = x1;
   let c_y1 = y1 - h;
   let c_x2 = x2;
@@ -495,7 +495,7 @@ function drawMouth(nose, mouth) {
   //strokeWeight(5);
   stroke(0, 0, 255);
   fill(220,220,100);
-  let f_w = face.box.width * .3;
+  let f_w = face.box.width * .2;
   let f_h = face.box.height * .2;
 
 //  let w = (mouth.norm_w * f_w);
@@ -509,13 +509,15 @@ function drawMouth(nose, mouth) {
 //  let h = (mouth.norm_h * f_h);
   let h = lerp(f_h * .1, f_h * 1.0, mouth.norm_h);
   let c_x1 = x1 + 10;
-  let c_y1 = y1 + h - 20;
+  let c_y1 = y1 + h - 15;
   let c_x2 = x2 - 10;
-  let c_y2 = y2 + h - 20;
+  let c_y2 = y2 + h - 15;
 
-  noFill();
+  fill(0,0,255);
+  //beginClip();
   bezier(x1, y1, c_x1, y1 - 4, c_x2, y2 - 4, x2, y2);
   bezier(x1, y1, c_x1, c_y1, c_x2, c_y2, x2, y2);
+  //endClip();
 }
 
 function draw() {
@@ -541,9 +543,10 @@ function draw() {
     drawFace();
 
     // draw the eyes
-    let rightEye = {"origin" : {"x": center.x - 15, "y": center.y}, "w": 30, "h": 40};
+    let gap = features.left_eye.width * .7;
+    let rightEye = {"origin" : {"x": center.x - gap, "y": center.y}, "w": 20, "h": 40};
     drawEye(rightEye);
-    let leftEye = {"origin" : {"x": center.x + 15, "y": center.y}, "w": 30, "h": 40};
+    let leftEye = {"origin" : {"x": center.x + gap, "y": center.y}, "w": 20, "h": 40};
     drawEye(leftEye);
 
     // draw the eye brows
